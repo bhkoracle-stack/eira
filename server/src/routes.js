@@ -130,7 +130,7 @@ function iceServers() {
 }
 
 function registerRoutes(app) {
-  const publicUrl = () => process.env.PUBLIC_URL.replace(/\/$/, "");
+  const publicUrl = () => String(process.env.PUBLIC_URL || "").replace(/\/$/, "");
 
   app.get("/health", async (_req, res, next) => {
     try {

@@ -2,8 +2,13 @@ const fs = require("fs");
 const path = require("path");
 const { Pool } = require("pg");
 
+const databaseUrl = process.env.DATABASE_URL || "";
+const connectionString = databaseUrl
+  .replace(/([?&])channel_binding=[^&]*&/, "$1")
+  .replace(/[?&]channel_binding=[^&]*$/, "");
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString,
+  ssl: databaseUrl.includes("neon.tech") ? { rejectUnauthorized: false } : undefined,
 });
 
 async function migrate() {
