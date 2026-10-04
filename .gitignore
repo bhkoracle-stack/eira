@@ -1,0 +1,11 @@
+node_modules/
+server/.env
+server/uploads/*
+!server/uploads/.gitkeep
+mobile/.expo/
+mobile/android/
+mobile/ios/
+mobile/dist/
+*.jks
+*.keystore
+.DS_Store
