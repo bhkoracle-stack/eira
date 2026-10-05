@@ -1,4 +1,4 @@
-const MAX_ENCODED_LENGTH = 4_500_000;
+const MAX_ENCODED_LENGTH = 3_400_000;
 
 export function uploadBody(data: string, name: string, mime: string) {
   const cleaned = data.replace(/^data:[^;]+;base64,/, "").replace(/\s/g, "");

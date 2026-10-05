@@ -15,7 +15,14 @@ const app = express();
 app.set("trust proxy", 1);
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(cors({ origin: true }));
-app.use(express.json({ limit: "5mb" }));
+const jsonParser = express.json({ limit: "1mb" });
+const uploadParser = express.json({ limit: "4mb" });
+app.use((req, res, next) => {
+  const upload =
+    req.method === "POST" &&
+    (req.path === "/me/photo" || /^\/matches\/[^/]+\/attachments$/.test(req.path));
+  return (upload ? uploadParser : jsonParser)(req, res, next);
+});
 app.use(
   "/auth",
   rateLimit({

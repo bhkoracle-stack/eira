@@ -109,7 +109,7 @@ export const api = {
       copyright?: string;
     }>("/config"),
   sendSupport: (body: { email: string; topic: string; message: string }, token?: string | null) =>
-    apiRequest<{ ok: boolean }>("/support", { method: "POST", token, body }),
+    apiRequest<{ ok: boolean; delivered?: boolean }>("/support", { method: "POST", token, body }),
   adminSummary: (token: string) => apiRequest<AdminSummary>("/admin/summary", { token }),
   adminUsers: (token: string, q = "", filter = "all") =>
     apiRequest<{ users: AdminUser[] }>(

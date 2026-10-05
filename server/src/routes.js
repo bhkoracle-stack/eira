@@ -62,18 +62,40 @@ function normalizeMime(mime, name) {
   return value;
 }
 
+const MAX_UPLOAD_BYTES = Math.floor(2.5 * 1024 * 1024);
+
+function matchesDeclaredType(buffer, mime) {
+  if (mime === "image/jpeg") return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+  if (mime === "image/png") return buffer.length >= 8 && buffer[0] === 0x89 && buffer.toString("ascii", 1, 4) === "PNG";
+  if (mime === "image/gif") {
+    const header = buffer.toString("ascii", 0, 6);
+    return header === "GIF87a" || header === "GIF89a";
+  }
+  if (mime === "image/webp") {
+    return buffer.length >= 12 && buffer.toString("ascii", 0, 4) === "RIFF" && buffer.toString("ascii", 8, 12) === "WEBP";
+  }
+  if (mime === "application/pdf") return buffer.length >= 5 && buffer.toString("ascii", 0, 5) === "%PDF-";
+  if (mime === "text/plain") return !buffer.includes(0);
+  return false;
+}
+
 function fileFromEncodedBody(body, allowedTypes) {
-  const name = typeof body?.name === "string" && body.name.trim() ? body.name.trim().slice(0, 180) : "upload";
-  const mime = normalizeMime(body?.mime, name);
+  const name =
+    typeof body?.name === "string" && body.name.trim()
+      ? body.name.trim().replace(/[\u0000-\u001f\u007f]/g, "").slice(0, 180)
+      : "upload";
+  const mime = normalizeMime(body?.mime, name || "upload");
   if (!allowedTypes.has(mime)) throw httpError(400, "That file type is not supported");
   const raw = typeof body?.data === "string" ? body.data : "";
   const cleaned = raw.replace(/^data:[^;]+;base64,/, "").replace(/\s/g, "");
-  if (!cleaned) throw httpError(400, "Choose a file");
-  if (cleaned.length > 4_500_000) throw httpError(400, "That file is too large");
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(cleaned)) throw httpError(400, "Choose a file");
+  if (cleaned.length > 3_400_000) throw httpError(400, "That file is too large");
   const buffer = Buffer.from(cleaned, "base64");
-  if (!buffer.length) throw httpError(400, "Choose a file");
-  if (buffer.length > 3 * 1024 * 1024) throw httpError(400, "That file is too large");
-  return { originalname: name, mimetype: mime, buffer };
+  if (!buffer.length || buffer.length > MAX_UPLOAD_BYTES) {
+    throw httpError(400, buffer.length ? "That file is too large" : "Choose a file");
+  }
+  if (!matchesDeclaredType(buffer, mime)) throw httpError(400, "That file could not be read");
+  return { originalname: name || "upload", mimetype: mime, buffer };
 }
 
 async function saveUpload(file) {
@@ -275,12 +297,14 @@ function registerRoutes(app) {
         `INSERT INTO support_requests (user_id, email, topic, message) VALUES ($1, $2, $3, $4)`,
         [userId, email, topic, message]
       );
+      let delivered = false;
       try {
         await sendSupportCopy({ email, topic, message });
+        delivered = true;
       } catch (mailError) {
         console.error("Support message was saved but not emailed", mailError);
       }
-      res.status(201).json({ ok: true });
+      res.status(201).json({ ok: true, delivered });
     } catch (error) {
       next(error);
     }

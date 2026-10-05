@@ -18,6 +18,7 @@ export default function SupportScreen() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
+  const [delivered, setDelivered] = useState(true);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -28,7 +29,8 @@ export default function SupportScreen() {
     setBusy(true);
     setError("");
     try {
-      await api.sendSupport({ email: email.trim(), topic, message: message.trim() }, token);
+      const result = await api.sendSupport({ email: email.trim(), topic, message: message.trim() }, token);
+      setDelivered(result.delivered !== false);
       setSent(true);
       setMessage("");
     } catch (err) {
@@ -73,7 +75,13 @@ export default function SupportScreen() {
           placeholder="What do you need help with?"
         />
         <ErrorText>{error}</ErrorText>
-        {sent ? <Text style={styles.sent}>Message sent. We will reply to {email.trim()}.</Text> : null}
+        {sent ? (
+          <Text style={styles.sent}>
+            {delivered
+              ? `Message sent. We will reply to ${email.trim()}.`
+              : "Message saved. Email delivery is not available yet."}
+          </Text>
+        ) : null}
         <Button label={sent ? "Send another message" : "Send to support"} onPress={submit} disabled={busy} />
         <CopyrightLine />
       </ScrollView>

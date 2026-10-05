@@ -46,36 +46,36 @@ export default function ProfileScreen() {
   }
 
   async function choosePhoto(source: "library" | "camera") {
-    if (source === "camera") {
-      const permission = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permission.granted) {
-        setError("Camera access is needed to take a profile picture.");
-        return;
-      }
-    } else if (Platform.OS !== "web") {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        setError("Photo access is needed to update your profile picture.");
-        return;
-      }
-    }
-    const options: ImagePicker.ImagePickerOptions = {
-      mediaTypes: ["images"],
-      allowsEditing: Platform.OS !== "web",
-      aspect: [3, 4],
-      quality: 0.5,
-      base64: true,
-    };
-    const picked =
-      source === "camera"
-        ? await ImagePicker.launchCameraAsync(options)
-        : await ImagePicker.launchImageLibraryAsync(options);
-    if (picked.canceled || !picked.assets[0]) return;
-    const asset = picked.assets[0];
-    setBusy(true);
     setError("");
     setSaved("");
     try {
+      if (source === "camera") {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+          setError("Camera access is needed to take a profile picture.");
+          return;
+        }
+      } else if (Platform.OS !== "web") {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+          setError("Photo access is needed to update your profile picture.");
+          return;
+        }
+      }
+      const options: ImagePicker.ImagePickerOptions = {
+        mediaTypes: ["images"],
+        allowsEditing: Platform.OS !== "web",
+        aspect: [3, 4],
+        quality: 0.5,
+        base64: true,
+      };
+      const picked =
+        source === "camera"
+          ? await ImagePicker.launchCameraAsync(options)
+          : await ImagePicker.launchImageLibraryAsync(options);
+      if (picked.canceled || !picked.assets[0]) return;
+      const asset = picked.assets[0];
+      setBusy(true);
       const body = uploadBody(asset.base64 || "", asset.fileName || "profile.jpg", asset.mimeType || "image/jpeg");
       const result = await api.uploadPhoto(sessionToken, body);
       setUser(result.user);
@@ -134,12 +134,6 @@ export default function ProfileScreen() {
                 {user.age} · {user.city || "Add a city"}
               </Text>
             </View>
-          </View>
-          <View style={styles.privacy}>
-            <Text style={styles.privacyTitle}>Privacy</Text>
-            <Text style={styles.privacyBody}>
-              Your birthday is not shown. Other members see your name, age, city, bio, and photo. You can block or report someone from a chat, and delete this account below.
-            </Text>
           </View>
           <Field label="Name" value={displayName} onChangeText={setDisplayName} />
           <Field label="City" value={city} onChangeText={setCity} />
@@ -258,9 +252,6 @@ const styles = StyleSheet.create({
   },
   metaName: { color: colors.ink, fontSize: 20, fontWeight: "700" },
   meta: { color: colors.muted, fontSize: 15, marginTop: 2 },
-  privacy: { backgroundColor: colors.blush, borderRadius: 16, padding: 16 },
-  privacyTitle: { color: colors.rose, fontWeight: "800", marginBottom: 6 },
-  privacyBody: { color: colors.ink, lineHeight: 22, fontSize: 15 },
   label: { color: colors.muted, marginTop: 4 },
   choices: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   choice: { backgroundColor: colors.card, borderRadius: 999, borderWidth: 1, borderColor: colors.line, paddingHorizontal: 12, paddingVertical: 8 },
