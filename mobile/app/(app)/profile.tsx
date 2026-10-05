@@ -5,7 +5,7 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { api } from "../../src/api";
 import { useAuth } from "../../src/auth";
-import { formFile } from "../../src/files";
+import { uploadBody } from "../../src/files";
 import { readCurrentPlace } from "../../src/place";
 import { Avatar, Button, CopyrightLine, ErrorText, Field, Title } from "../../src/components/ui";
 import { colors } from "../../src/theme";
@@ -63,7 +63,8 @@ export default function ProfileScreen() {
       mediaTypes: ["images"],
       allowsEditing: Platform.OS !== "web",
       aspect: [3, 4],
-      quality: 0.85,
+      quality: 0.5,
+      base64: true,
     };
     const picked =
       source === "camera"
@@ -75,10 +76,8 @@ export default function ProfileScreen() {
     setError("");
     setSaved("");
     try {
-      const file = await formFile(asset.uri, asset.fileName || "profile.jpg", asset.mimeType || "image/jpeg");
-      const form = new FormData();
-      form.append("photo", file);
-      const result = await api.uploadPhoto(sessionToken, form);
+      const body = uploadBody(asset.base64 || "", asset.fileName || "profile.jpg", asset.mimeType || "image/jpeg");
+      const result = await api.uploadPhoto(sessionToken, body);
       setUser(result.user);
       setSaved("Photo updated");
     } catch (err) {
@@ -86,6 +85,14 @@ export default function ProfileScreen() {
     } finally {
       setBusy(false);
     }
+  }
+
+  function changePhoto() {
+    Alert.alert("Profile photo", undefined, [
+      { text: "Choose from library", onPress: () => choosePhoto("library") },
+      { text: "Take photo", onPress: () => choosePhoto("camera") },
+      { text: "Cancel", style: "cancel" },
+    ]);
   }
 
   function confirmDelete() {
@@ -113,7 +120,14 @@ export default function ProfileScreen() {
         <ScrollView contentContainerStyle={styles.content}>
           <Title>Profile</Title>
           <View style={styles.hero}>
-            <Avatar name={user.displayName} photoUrl={user.photoUrl} size={72} />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Change profile photo"
+              disabled={busy}
+              onPress={changePhoto}
+            >
+              <Avatar name={user.displayName} photoUrl={user.photoUrl} size={96} />
+            </Pressable>
             <View style={{ flex: 1 }}>
               <Text style={styles.metaName}>{user.displayName}</Text>
               <Text style={styles.meta}>
@@ -127,8 +141,6 @@ export default function ProfileScreen() {
               Your birthday is not shown. Other members see your name, age, city, bio, and photo. You can block or report someone from a chat, and delete this account below.
             </Text>
           </View>
-          <Button label="Upload photo" tone="ghost" onPress={() => choosePhoto("library")} disabled={busy} />
-          <Button label="Take photo" tone="ghost" onPress={() => choosePhoto("camera")} disabled={busy} />
           <Field label="Name" value={displayName} onChangeText={setDisplayName} />
           <Field label="City" value={city} onChangeText={setCity} />
           <Button

@@ -18,7 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { api } from "../../src/api";
 import { useAuth } from "../../src/auth";
 import { mediaUrl } from "../../src/config";
-import { formFile } from "../../src/files";
+import { readFileUpload, uploadBody } from "../../src/files";
 import { useSocket } from "../../src/socket";
 import { AttachIcon, BackIcon, CameraIcon, CloseIcon, MoreIcon, PhoneIcon, SmileIcon, VideoIcon } from "../../src/components/icons";
 import { Avatar } from "../../src/components/ui";
@@ -105,14 +105,12 @@ export default function ChatScreen() {
     }
   }
 
-  async function sendAttachment(file: Blob) {
+  async function sendAttachment(body: { data: string; mime: string; name: string }) {
     if (!token || !matchId) return;
     setMenu(false);
     setError("");
-    const form = new FormData();
-    form.append("file", file);
     try {
-      const result = await api.sendAttachment(token, matchId, form);
+      const result = await api.sendAttachment(token, matchId, body);
       setMessages((current) =>
         current.some((item) => item.id === result.message.id) ? current : [...current, result.message]
       );
@@ -138,12 +136,16 @@ export default function ChatScreen() {
     }
     const picked =
       source === "camera"
-        ? await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.8 })
-        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8 });
+        ? await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.5, base64: true })
+        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.5, base64: true });
     if (picked.canceled || !picked.assets[0]) return;
     const asset = picked.assets[0];
-    const file = await formFile(asset.uri, asset.fileName || "photo.jpg", asset.mimeType || "image/jpeg");
-    await sendAttachment(file);
+    try {
+      const body = uploadBody(asset.base64 || "", asset.fileName || "photo.jpg", asset.mimeType || "image/jpeg");
+      await sendAttachment(body);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send that photo");
+    }
   }
 
   async function pickChatFile() {
@@ -153,8 +155,12 @@ export default function ChatScreen() {
     });
     if (picked.canceled || !picked.assets[0]) return;
     const asset = picked.assets[0];
-    const file = await formFile(asset.uri, asset.name, asset.mimeType || "application/octet-stream");
-    await sendAttachment(file);
+    try {
+      const body = await readFileUpload(asset.uri, asset.name, asset.mimeType || "application/octet-stream");
+      await sendAttachment(body);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send that file");
+    }
   }
 
   function openCall(kind: "audio" | "video") {

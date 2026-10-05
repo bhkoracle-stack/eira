@@ -15,7 +15,7 @@ const app = express();
 app.set("trust proxy", 1);
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(cors({ origin: true }));
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "5mb" }));
 app.use(
   "/auth",
   rateLimit({
@@ -51,15 +51,18 @@ app.use((_req, res) => {
 app.use((error, _req, res, _next) => {
   if (res.headersSent) return;
   const parseFailed = error.type === "entity.parse.failed";
-  const status = parseFailed ? 400 : Number(error.status || error.statusCode) || 500;
+  const tooLarge = error.type === "entity.too.large";
+  const status = parseFailed || tooLarge ? 400 : Number(error.status || error.statusCode) || 500;
   const safeStatus = status >= 400 && status < 600 ? status : 500;
   if (safeStatus >= 500) console.error(error);
   const message =
-    safeStatus < 500 && typeof error.message === "string" && error.message
-      ? parseFailed
-        ? "That request was not valid"
-        : error.message
-      : "Something went wrong";
+    tooLarge
+      ? "That file is too large"
+      : safeStatus < 500 && typeof error.message === "string" && error.message
+        ? parseFailed
+          ? "That request was not valid"
+          : error.message
+        : "Something went wrong";
   res.status(safeStatus).json({ error: message });
 });
 

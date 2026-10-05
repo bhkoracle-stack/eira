@@ -58,7 +58,7 @@ const supportHtml = page(
   `<p>Eira support covers accounts, profile photos, chat, calls, and safety. Adults 18 and older only.</p>
   <ul>
     <li>Account: sign-in, password, or deleting your profile. Deletion is under You, then Delete account.</li>
-    <li>Photos: use Upload photo or Take photo on your profile. Use JPG, PNG, or WebP.</li>
+    <li>Photos: tap your profile photo, then choose a picture or take one. Use JPG, PNG, or WebP.</li>
     <li>Chat: open a match, then attach a photo, take a photo, or send a PDF or text file.</li>
     <li>Calls: phone and video run in the Android app, not in a browser preview.</li>
     <li>Safety: block or report someone from the chat options menu.</li>

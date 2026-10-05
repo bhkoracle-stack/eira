@@ -67,8 +67,8 @@ export const api = {
       `/geo/reverse?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}`,
       { token }
     ),
-  uploadPhoto: (token: string, form: FormData) =>
-    apiRequest<{ user: User }>("/me/photo", { method: "POST", token, form }),
+  uploadPhoto: (token: string, body: { data: string; mime: string; name: string }) =>
+    apiRequest<{ user: User }>("/me/photo", { method: "POST", token, body }),
   deleteMe: (token: string) => apiRequest<{ ok: boolean }>("/me", { method: "DELETE", token }),
   changePassword: (token: string, currentPassword: string, newPassword: string) =>
     apiRequest<{ ok: boolean }>("/me/password", {
@@ -92,11 +92,11 @@ export const api = {
       token,
       body: { body },
     }),
-  sendAttachment: (token: string, matchId: string, form: FormData) =>
+  sendAttachment: (token: string, matchId: string, body: { data: string; mime: string; name: string }) =>
     apiRequest<{ message: ChatMessage }>(`/matches/${matchId}/attachments`, {
       method: "POST",
       token,
-      form,
+      body,
     }),
   block: (token: string, userId: string) =>
     apiRequest<{ ok: boolean }>("/blocks", { method: "POST", token, body: { userId } }),

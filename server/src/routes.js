@@ -48,6 +48,34 @@ function uploadErrorMessage(error) {
   return "Could not upload that file";
 }
 
+function normalizeMime(mime, name) {
+  const value = String(mime || "").toLowerCase();
+  if (value === "image/jpg" || value === "image/pjpeg") return "image/jpeg";
+  if (imageTypes.has(value) || value === "application/pdf" || value === "text/plain") return value;
+  const ext = path.extname(String(name || "")).toLowerCase();
+  if (ext === ".png") return "image/png";
+  if (ext === ".webp") return "image/webp";
+  if (ext === ".gif") return "image/gif";
+  if (ext === ".pdf") return "application/pdf";
+  if (ext === ".txt") return "text/plain";
+  if (ext === ".jpg" || ext === ".jpeg") return "image/jpeg";
+  return value;
+}
+
+function fileFromEncodedBody(body, allowedTypes) {
+  const name = typeof body?.name === "string" && body.name.trim() ? body.name.trim().slice(0, 180) : "upload";
+  const mime = normalizeMime(body?.mime, name);
+  if (!allowedTypes.has(mime)) throw httpError(400, "That file type is not supported");
+  const raw = typeof body?.data === "string" ? body.data : "";
+  const cleaned = raw.replace(/^data:[^;]+;base64,/, "").replace(/\s/g, "");
+  if (!cleaned) throw httpError(400, "Choose a file");
+  if (cleaned.length > 4_500_000) throw httpError(400, "That file is too large");
+  const buffer = Buffer.from(cleaned, "base64");
+  if (!buffer.length) throw httpError(400, "Choose a file");
+  if (buffer.length > 3 * 1024 * 1024) throw httpError(400, "That file is too large");
+  return { originalname: name, mimetype: mime, buffer };
+}
+
 async function saveUpload(file) {
   const name = storedName(file);
   if (!file?.buffer) throw httpError(400, "Choose a file");
@@ -479,16 +507,32 @@ function registerRoutes(app) {
   app.patch("/me", requireAuth, updateProfile);
   app.post("/me", requireAuth, updateProfile);
 
+  async function storeProfilePhoto(req, file) {
+    const current = await pool.query("SELECT photo_path FROM users WHERE id = $1", [req.userId]);
+    const name = await saveUpload(file);
+    await pool.query("UPDATE users SET photo_path = $1 WHERE id = $2", [name, req.userId]);
+    removeUpload(current.rows[0]?.photo_path);
+    return loadUser(req.userId);
+  }
+
   app.post("/me/photo", requireAuth, (req, res, next) => {
+    const contentType = String(req.headers["content-type"] || "");
+    if (contentType.includes("application/json")) {
+      try {
+        const file = fileFromEncodedBody(req.body, imageTypes);
+        storeProfilePhoto(req, file)
+          .then((user) => res.json({ user: publicUser(user, publicUrl(req)) }))
+          .catch(next);
+      } catch (error) {
+        next(error);
+      }
+      return;
+    }
     upload.single("photo")(req, res, async (uploadError) => {
       if (uploadError) return res.status(400).json({ error: uploadErrorMessage(uploadError) });
       if (!req.file) return res.status(400).json({ error: "Choose a photo" });
       try {
-        const current = await pool.query("SELECT photo_path FROM users WHERE id = $1", [req.userId]);
-        const name = await saveUpload(req.file);
-        await pool.query("UPDATE users SET photo_path = $1 WHERE id = $2", [name, req.userId]);
-        removeUpload(current.rows[0]?.photo_path);
-        const user = await loadUser(req.userId);
+        const user = await storeProfilePhoto(req, req.file);
         res.json({ user: publicUser(user, publicUrl(req)) });
       } catch (error) {
         next(error);
@@ -770,25 +814,42 @@ function registerRoutes(app) {
     }
   });
 
+  async function storeAttachment(req, file) {
+    const { otherId } = await loadMatch(req.params.matchId, req.userId);
+    const kind = imageTypes.has(file.mimetype) ? "image" : "file";
+    const label = kind === "image" ? "Photo" : file.originalname.slice(0, 180);
+    const name = await saveUpload(file);
+    const inserted = await pool.query(
+      `INSERT INTO messages (match_id, sender_id, body, attachment_path, attachment_name, attachment_type)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, match_id, sender_id, body, created_at, attachment_path, attachment_name, attachment_type`,
+      [req.params.matchId, req.userId, label, name, file.originalname, kind]
+    );
+    const message = mapMessage(inserted.rows[0], publicUrl(req));
+    const io = req.app.get("io");
+    io.to(`user:${req.userId}`).emit("message:new", message);
+    io.to(`user:${otherId}`).emit("message:new", message);
+    return message;
+  }
+
   app.post("/matches/:matchId/attachments", requireAuth, (req, res, next) => {
+    const contentType = String(req.headers["content-type"] || "");
+    if (contentType.includes("application/json")) {
+      try {
+        const file = fileFromEncodedBody(req.body, attachmentTypes);
+        storeAttachment(req, file)
+          .then((message) => res.status(201).json({ message }))
+          .catch(next);
+      } catch (error) {
+        next(error);
+      }
+      return;
+    }
     uploadAttachment.single("file")(req, res, async (uploadError) => {
       if (uploadError) return res.status(400).json({ error: uploadErrorMessage(uploadError) });
       if (!req.file) return res.status(400).json({ error: "Choose a file" });
       try {
-        const { otherId } = await loadMatch(req.params.matchId, req.userId);
-        const kind = imageTypes.has(req.file.mimetype) ? "image" : "file";
-        const label = kind === "image" ? "Photo" : req.file.originalname.slice(0, 180);
-        const name = await saveUpload(req.file);
-        const inserted = await pool.query(
-          `INSERT INTO messages (match_id, sender_id, body, attachment_path, attachment_name, attachment_type)
-           VALUES ($1, $2, $3, $4, $5, $6)
-           RETURNING id, match_id, sender_id, body, created_at, attachment_path, attachment_name, attachment_type`,
-          [req.params.matchId, req.userId, label, name, req.file.originalname, kind]
-        );
-        const message = mapMessage(inserted.rows[0], publicUrl(req));
-        const io = req.app.get("io");
-        io.to(`user:${req.userId}`).emit("message:new", message);
-        io.to(`user:${otherId}`).emit("message:new", message);
+        const message = await storeAttachment(req, req.file);
         res.status(201).json({ message });
       } catch (error) {
         next(error);
