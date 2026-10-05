@@ -63,7 +63,7 @@ const supportHtml = page(
     <li>Calls: phone and video run in the Android app, not in a browser preview.</li>
     <li>Safety: block or report someone from the chat options menu.</li>
   </ul>
-  <p>Email <a href="mailto:support@eira.app">support@eira.app</a>, or send a message from Support inside the app. Include the email on your account so a reply can reach you.</p>`
+  <p>Email <a href="mailto:bhk.oracle@gmail.com">bhk.oracle@gmail.com</a>, or send a message from Support inside the app. Include the email on your account so a reply can reach you.</p>`
 );
 
 const childSafetyHtml = page(

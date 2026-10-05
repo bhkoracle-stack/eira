@@ -216,7 +216,7 @@ function registerRoutes(app) {
     res.json({
       iceServers: iceServers(),
       minAge: 18,
-      supportEmail: process.env.SUPPORT_EMAIL || "support@eira.app",
+      supportEmail: process.env.SUPPORT_EMAIL || "bhk.oracle@gmail.com",
       copyright: "© 2026 Eira. All rights reserved.",
     });
   });
