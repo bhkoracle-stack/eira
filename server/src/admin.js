@@ -60,7 +60,7 @@ function registerAdminRoutes(app, { requireAuth, publicUrl, removeUpload }) {
          LIMIT 100`,
         [q, filter]
       );
-      res.json({ users: result.rows.map((row) => adminUser(row, publicUrl())) });
+      res.json({ users: result.rows.map((row) => adminUser(row, publicUrl(req))) });
     } catch (error) {
       next(error);
     }
@@ -223,7 +223,7 @@ function registerAdminRoutes(app, { requireAuth, publicUrl, removeUpload }) {
               age: row.age,
               report_count: row.report_count,
             },
-            publicUrl()
+            publicUrl(req)
           ),
         })),
       });
@@ -286,7 +286,7 @@ function registerAdminRoutes(app, { requireAuth, publicUrl, removeUpload }) {
         .map((row) => ({
           id: `${row.kind}:${row.user_id}:${row.path || row.body}:${row.created_at}`,
           kind: row.kind === "image" ? "photo" : row.kind,
-          url: row.path ? `${publicUrl()}/uploads/${row.path}` : null,
+          url: row.path ? `${publicUrl(req)}/uploads/${row.path}` : null,
           body: row.body || "",
           createdAt: row.created_at,
           userId: row.user_id,

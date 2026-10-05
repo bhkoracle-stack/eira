@@ -151,7 +151,15 @@ function iceServers() {
 }
 
 function registerRoutes(app) {
-  const publicUrl = () => String(process.env.PUBLIC_URL || "").replace(/\/$/, "");
+  const publicUrl = (req) => {
+    const configured = String(process.env.PUBLIC_URL || "").replace(/\/$/, "");
+    if (configured) return configured;
+    const host = req?.get?.("host");
+    if (!host) return "";
+    const forwarded = req.get("x-forwarded-proto");
+    const proto = String(forwarded || req.protocol || "https").split(",")[0].trim();
+    return `${proto}://${host}`;
+  };
 
   app.get("/uploads/:name", async (req, res, next) => {
     try {
@@ -267,7 +275,7 @@ function registerRoutes(app) {
         ]
       );
       const user = await loadUser(inserted.rows[0].id);
-      res.status(201).json({ token: signToken(user.id), user: publicUser(user, publicUrl()) });
+      res.status(201).json({ token: signToken(user.id), user: publicUser(user, publicUrl(req)) });
     } catch (error) {
       if (error.code === "23505") return res.status(409).json({ error: "That email is already registered" });
       if (error.code === "23514") return res.status(400).json({ error: "You must be 18 or older" });
@@ -369,7 +377,7 @@ function registerRoutes(app) {
       const valid = row ? await bcrypt.compare(password, row.password_hash) : false;
       if (!row || !valid) return res.status(401).json({ error: "Email or password is wrong" });
       if (row.banned_at) return res.status(403).json({ error: "This account is banned" });
-      res.json({ token: signToken(row.id), user: publicUser(row, publicUrl()) });
+      res.json({ token: signToken(row.id), user: publicUser(row, publicUrl(req)) });
     } catch (error) {
       next(error);
     }
@@ -379,7 +387,7 @@ function registerRoutes(app) {
     try {
       const user = await loadUser(req.userId);
       if (!user) return res.status(401).json({ error: "Session expired. Sign in again." });
-      res.json({ user: publicUser(user, publicUrl()) });
+      res.json({ user: publicUser(user, publicUrl(req)) });
     } catch (error) {
       next(error);
     }
@@ -462,7 +470,7 @@ function registerRoutes(app) {
       values.push(req.userId);
       await pool.query(`UPDATE users SET ${fields.join(", ")} WHERE id = $${values.length}`, values);
       const user = await loadUser(req.userId);
-      res.json({ user: publicUser(user, publicUrl()) });
+      res.json({ user: publicUser(user, publicUrl(req)) });
     } catch (error) {
       next(error);
     }
@@ -478,7 +486,7 @@ function registerRoutes(app) {
         await pool.query("UPDATE users SET photo_path = $1 WHERE id = $2", [name, req.userId]);
         removeUpload(current.rows[0]?.photo_path);
         const user = await loadUser(req.userId);
-        res.json({ user: publicUser(user, publicUrl()) });
+        res.json({ user: publicUser(user, publicUrl(req)) });
       } catch (error) {
         next(error);
       }
@@ -581,7 +589,7 @@ function registerRoutes(app) {
           Number(me.max_distance_km) || 50,
         ]
       );
-      res.json({ profiles: result.rows.map((row) => profileCard(row, publicUrl())) });
+      res.json({ profiles: result.rows.map((row) => profileCard(row, publicUrl(req))) });
     } catch (error) {
       next(error);
     }
@@ -649,13 +657,13 @@ function registerRoutes(app) {
         const other = await loadUser(targetId);
         match = {
           id: matchId,
-          user: profileCard(other, publicUrl()),
+          user: profileCard(other, publicUrl(req)),
         };
         const io = req.app.get("io");
         const me = await loadUser(req.userId);
         io.to(`user:${targetId}`).emit("match:new", {
           id: matchId,
-          user: profileCard(me, publicUrl()),
+          user: profileCard(me, publicUrl(req)),
         });
       }
       res.json({ matched: Boolean(match), match });
@@ -709,7 +717,7 @@ function registerRoutes(app) {
           lastMessage: row.last_type === "image" ? "Photo" : row.last_body,
           lastMessageAt: row.last_at,
           online: online.has(row.id),
-          user: profileCard(row, publicUrl()),
+          user: profileCard(row, publicUrl(req)),
         })),
       });
     } catch (error) {
@@ -729,7 +737,7 @@ function registerRoutes(app) {
         [req.params.matchId]
       );
       res.json({
-        messages: result.rows.map((row) => mapMessage(row, publicUrl())),
+        messages: result.rows.map((row) => mapMessage(row, publicUrl(req))),
       });
     } catch (error) {
       next(error);
@@ -749,7 +757,7 @@ function registerRoutes(app) {
          RETURNING id, match_id, sender_id, body, created_at, attachment_path, attachment_name, attachment_type`,
         [req.params.matchId, req.userId, body]
       );
-      const message = mapMessage(inserted.rows[0], publicUrl());
+      const message = mapMessage(inserted.rows[0], publicUrl(req));
       const io = req.app.get("io");
       io.to(`user:${req.userId}`).emit("message:new", message);
       io.to(`user:${otherId}`).emit("message:new", message);
@@ -774,7 +782,7 @@ function registerRoutes(app) {
            RETURNING id, match_id, sender_id, body, created_at, attachment_path, attachment_name, attachment_type`,
           [req.params.matchId, req.userId, label, name, req.file.originalname, kind]
         );
-        const message = mapMessage(inserted.rows[0], publicUrl());
+        const message = mapMessage(inserted.rows[0], publicUrl(req));
         const io = req.app.get("io");
         io.to(`user:${req.userId}`).emit("message:new", message);
         io.to(`user:${otherId}`).emit("message:new", message);
