@@ -7,7 +7,7 @@ const multer = require("multer");
 const { pool, httpError } = require("./db");
 const { publicUser, profileCard, USER_COLUMNS } = require("./present");
 const { validateSignup, validateProfilePatch } = require("./validate");
-const { privacyHtml, termsHtml, copyrightHtml, supportHtml } = require("./legal");
+const { privacyHtml, termsHtml, copyrightHtml, supportHtml, childSafetyHtml } = require("./legal");
 const { locate, nearestPlace } = require("./places");
 const { registerAdminRoutes } = require("./admin");
 const { sendResetCode, mailConfigured } = require("./mail");
@@ -235,6 +235,10 @@ function registerRoutes(app) {
 
   app.get("/legal/support", (_req, res) => {
     res.type("html").send(supportHtml);
+  });
+
+  app.get("/legal/child-safety", (_req, res) => {
+    res.type("html").send(childSafetyHtml);
   });
 
   const supportTopics = new Set(["Account", "Profile photo", "Chat", "Calls", "Safety", "Copyright", "Other"]);

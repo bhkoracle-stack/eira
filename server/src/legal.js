@@ -14,7 +14,7 @@ function page(title, body) {
 <body>
   <h1>${title}</h1>
   ${body}
-  <p><a href="/legal/privacy">Privacy</a> · <a href="/legal/terms">Terms</a> · <a href="/legal/copyright">Copyright</a> · <a href="/legal/support">Support</a></p>
+  <p><a href="/legal/privacy">Privacy</a> · <a href="/legal/terms">Terms</a> · <a href="/legal/copyright">Copyright</a> · <a href="/legal/child-safety">Child safety</a> · <a href="/legal/support">Support</a></p>
   <p>© 2026 Eira. All rights reserved.</p>
 </body>
 </html>`;
@@ -66,6 +66,33 @@ const supportHtml = page(
   <p>Email <a href="mailto:support@eira.app">support@eira.app</a>, or send a message from Support inside the app. Include the email on your account so a reply can reach you.</p>`
 );
 
+const childSafetyHtml = page(
+  "Child safety standards",
+  `<p>Eira is a dating app for adults who are 18 or older. Child sexual abuse and exploitation (CSAE), including child sexual abuse material (CSAM), are prohibited.</p>
+  <h2>Who may use Eira</h2>
+  <ul>
+    <li>You must be at least 18 to create an account. Signup asks for a birthday and rejects anyone under 18.</li>
+    <li>Do not create an account for a child, and do not present a child as an adult.</li>
+  </ul>
+  <h2>What is not allowed</h2>
+  <ul>
+    <li>Any sexual content involving a person under 18, including photos, video, drawings, or messages.</li>
+    <li>Asking a child for sexual content, or arranging to meet a child for a sexual purpose.</li>
+    <li>Sharing, requesting, or linking to child sexual abuse material.</li>
+    <li>Grooming, sexual extortion, or trafficking of a child.</li>
+  </ul>
+  <h2>How to report</h2>
+  <p>In the app, open the chat with that person, choose the options menu, and report them. You can also email <a href="mailto:bhk.oracle@gmail.com">bhk.oracle@gmail.com</a>. Include the account email, the profile name, and what you saw. Do not send the illegal material itself.</p>
+  <h2>What we do</h2>
+  <ul>
+    <li>We review reports of child sexual abuse material and remove the account and the content we can identify.</li>
+    <li>We disable accounts that break these standards.</li>
+    <li>We report child sexual abuse material to the appropriate regional authority when the law requires it.</li>
+  </ul>
+  <h2>Contact</h2>
+  <p>The child-safety contact for Eira is <a href="mailto:bhk.oracle@gmail.com">bhk.oracle@gmail.com</a>. This address can answer questions about these standards and about reports.</p>`
+);
+
 const termsHtml = page(
   "Terms of use",
   `<p>Eira is for adults who are 18 or older. By creating an account you confirm that you are at least 18.</p>
@@ -79,4 +106,4 @@ const termsHtml = page(
   <p>The app is provided as software you run against your own server. The operator of that server is responsible for backups, uptime, and complying with local law.</p>`
 );
 
-module.exports = { privacyHtml, termsHtml, copyrightHtml, supportHtml };
+module.exports = { privacyHtml, termsHtml, copyrightHtml, supportHtml, childSafetyHtml };
