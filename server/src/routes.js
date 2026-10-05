@@ -429,7 +429,7 @@ function registerRoutes(app) {
     }
   });
 
-  app.patch("/me", requireAuth, async (req, res, next) => {
+  async function updateProfile(req, res, next) {
     try {
       const parsed = validateProfilePatch(req.body || {});
       if (parsed.error) return res.status(400).json({ error: parsed.error });
@@ -474,7 +474,10 @@ function registerRoutes(app) {
     } catch (error) {
       next(error);
     }
-  });
+  }
+
+  app.patch("/me", requireAuth, updateProfile);
+  app.post("/me", requireAuth, updateProfile);
 
   app.post("/me/photo", requireAuth, (req, res, next) => {
     upload.single("photo")(req, res, async (uploadError) => {

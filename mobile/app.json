@@ -2,7 +2,7 @@
   "expo": {
     "name": "Eira",
     "slug": "eira",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "eira",
@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "android": {
       "package": "com.eira.dating",
-      "versionCode": 2,
+      "versionCode": 3,
       "permissions": [
         "CAMERA",
         "RECORD_AUDIO",

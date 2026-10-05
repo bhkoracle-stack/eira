@@ -61,7 +61,7 @@ export const api = {
     }),
   me: (token: string) => apiRequest<{ user: User }>("/me", { token }),
   updateMe: (token: string, body: unknown) =>
-    apiRequest<{ user: User }>("/me", { method: "PATCH", token, body }),
+    apiRequest<{ user: User }>("/me", { method: "POST", token, body }),
   reverseGeocode: (token: string, latitude: number, longitude: number) =>
     apiRequest<{ city: string; country: string }>(
       `/geo/reverse?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}`,
