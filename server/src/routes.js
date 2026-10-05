@@ -26,10 +26,7 @@ function storedName(file) {
 
 function uploader(types, maxBytes) {
   return multer({
-    storage: multer.diskStorage({
-      destination: uploadsDir,
-      filename: (_req, file, cb) => cb(null, storedName(file)),
-    }),
+    storage: multer.memoryStorage(),
     limits: { fileSize: maxBytes },
     fileFilter: (_req, file, cb) => {
       if (types.has(file.mimetype)) cb(null, true);
@@ -45,8 +42,32 @@ function isUploadedFile(name) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\./i.test(name || "");
 }
 
+function uploadErrorMessage(error) {
+  if (error?.code === "LIMIT_FILE_SIZE") return "That file is too large";
+  if (error?.message === "That file type is not supported") return error.message;
+  return "Could not upload that file";
+}
+
+async function saveUpload(file) {
+  const name = storedName(file);
+  if (!file?.buffer) throw httpError(400, "Choose a file");
+  await pool.query("INSERT INTO uploads (name, mime, bytes) VALUES ($1, $2, $3)", [
+    name,
+    file.mimetype,
+    file.buffer,
+  ]);
+  try {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+    fs.writeFileSync(path.join(uploadsDir, name), file.buffer);
+  } catch {
+    // Hosted copies of this API have a read-only disk. The database row is served instead.
+  }
+  return name;
+}
+
 function removeUpload(name) {
   if (!isUploadedFile(name)) return;
+  pool.query("DELETE FROM uploads WHERE name = $1", [name]).catch(() => {});
   fs.unlink(path.join(uploadsDir, path.basename(name)), () => {});
 }
 
@@ -131,6 +152,20 @@ function iceServers() {
 
 function registerRoutes(app) {
   const publicUrl = () => String(process.env.PUBLIC_URL || "").replace(/\/$/, "");
+
+  app.get("/uploads/:name", async (req, res, next) => {
+    try {
+      if (!isUploadedFile(req.params.name)) return next();
+      const stored = await pool.query("SELECT mime, bytes FROM uploads WHERE name = $1", [req.params.name]);
+      const file = stored.rows[0];
+      if (!file) return next();
+      res.set("Content-Type", file.mime);
+      res.set("Cache-Control", "public, max-age=31536000, immutable");
+      res.send(file.bytes);
+    } catch (error) {
+      next(error);
+    }
+  });
 
   app.get("/health", async (_req, res, next) => {
     try {
@@ -435,11 +470,12 @@ function registerRoutes(app) {
 
   app.post("/me/photo", requireAuth, (req, res, next) => {
     upload.single("photo")(req, res, async (uploadError) => {
-      if (uploadError) return res.status(400).json({ error: uploadError.message });
+      if (uploadError) return res.status(400).json({ error: uploadErrorMessage(uploadError) });
       if (!req.file) return res.status(400).json({ error: "Choose a photo" });
       try {
         const current = await pool.query("SELECT photo_path FROM users WHERE id = $1", [req.userId]);
-        await pool.query("UPDATE users SET photo_path = $1 WHERE id = $2", [req.file.filename, req.userId]);
+        const name = await saveUpload(req.file);
+        await pool.query("UPDATE users SET photo_path = $1 WHERE id = $2", [name, req.userId]);
         removeUpload(current.rows[0]?.photo_path);
         const user = await loadUser(req.userId);
         res.json({ user: publicUser(user, publicUrl()) });
@@ -725,17 +761,18 @@ function registerRoutes(app) {
 
   app.post("/matches/:matchId/attachments", requireAuth, (req, res, next) => {
     uploadAttachment.single("file")(req, res, async (uploadError) => {
-      if (uploadError) return res.status(400).json({ error: uploadError.message });
+      if (uploadError) return res.status(400).json({ error: uploadErrorMessage(uploadError) });
       if (!req.file) return res.status(400).json({ error: "Choose a file" });
       try {
         const { otherId } = await loadMatch(req.params.matchId, req.userId);
         const kind = imageTypes.has(req.file.mimetype) ? "image" : "file";
         const label = kind === "image" ? "Photo" : req.file.originalname.slice(0, 180);
+        const name = await saveUpload(req.file);
         const inserted = await pool.query(
           `INSERT INTO messages (match_id, sender_id, body, attachment_path, attachment_name, attachment_type)
            VALUES ($1, $2, $3, $4, $5, $6)
            RETURNING id, match_id, sender_id, body, created_at, attachment_path, attachment_name, attachment_type`,
-          [req.params.matchId, req.userId, label, req.file.filename, req.file.originalname, kind]
+          [req.params.matchId, req.userId, label, name, req.file.originalname, kind]
         );
         const message = mapMessage(inserted.rows[0], publicUrl());
         const io = req.app.get("io");

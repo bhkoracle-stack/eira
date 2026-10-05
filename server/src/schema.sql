@@ -71,6 +71,13 @@ CREATE TABLE IF NOT EXISTS password_resets (
 
 CREATE INDEX IF NOT EXISTS password_resets_user_idx ON password_resets (user_id, created_at DESC);
 
+CREATE TABLE IF NOT EXISTS uploads (
+  name TEXT PRIMARY KEY,
+  mime TEXT NOT NULL,
+  bytes BYTEA NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS support_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users (id) ON DELETE SET NULL,

@@ -1,6 +1,7 @@
 import { deleteSecret, readSecret, writeSecret } from "./storage";
 
-const publishedServer = process.env.EXPO_PUBLIC_API_URL?.trim().replace(/\/$/, "") || "";
+const fromEnv = process.env.EXPO_PUBLIC_API_URL?.trim().replace(/\/$/, "") || "";
+const publishedServer = fromEnv || (__DEV__ ? "" : "https://eira-blush.vercel.app");
 export const DEFAULT_SERVER = publishedServer || "http://192.168.1.14:4000";
 const URL_KEY = "eira_server";
 

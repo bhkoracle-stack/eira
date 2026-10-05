@@ -19,15 +19,22 @@ export async function apiRequest<T>(path: string, options: Options = {}): Promis
     body = JSON.stringify(options.body);
   }
 
-  let response: Response;
-  try {
-    response = await fetch(`${getServerUrl()}${path}`, {
-      method: options.method || "GET",
-      headers,
-      body,
-    });
-  } catch {
-    throw new Error("Can't reach the server. Check the address and that the API is running.");
+  let response: Response | null = null;
+  let failure: unknown;
+  for (let attempt = 0; attempt < 2 && !response; attempt += 1) {
+    try {
+      response = await fetch(`${getServerUrl()}${path}`, {
+        method: options.method || "GET",
+        headers,
+        body,
+      });
+    } catch (error) {
+      failure = error;
+    }
+  }
+  if (!response) {
+    console.warn(failure);
+    throw new Error("Can't reach the server. Check your connection and try again.");
   }
 
   const data = await response.json().catch(() => ({}));
