@@ -10,7 +10,7 @@ const { validateSignup, validateProfilePatch } = require("./validate");
 const { privacyHtml, termsHtml, copyrightHtml, supportHtml, childSafetyHtml } = require("./legal");
 const { locate, nearestPlace } = require("./places");
 const { registerAdminRoutes } = require("./admin");
-const { sendResetCode, mailConfigured } = require("./mail");
+const { sendResetCode, sendSupportCopy, mailConfigured } = require("./mail");
 
 const uploadsDir = path.join(__dirname, "..", "uploads");
 
@@ -216,7 +216,7 @@ function registerRoutes(app) {
     res.json({
       iceServers: iceServers(),
       minAge: 18,
-      supportEmail: process.env.SUPPORT_EMAIL || "bhk.oracle@gmail.com",
+      supportEmail: process.env.SUPPORT_EMAIL || "support@eira.app",
       copyright: "© 2026 Eira. All rights reserved.",
     });
   });
@@ -275,6 +275,11 @@ function registerRoutes(app) {
         `INSERT INTO support_requests (user_id, email, topic, message) VALUES ($1, $2, $3, $4)`,
         [userId, email, topic, message]
       );
+      try {
+        await sendSupportCopy({ email, topic, message });
+      } catch (mailError) {
+        console.error("Support message was saved but not emailed", mailError);
+      }
       res.status(201).json({ ok: true });
     } catch (error) {
       next(error);

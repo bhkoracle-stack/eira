@@ -63,7 +63,7 @@ const supportHtml = page(
     <li>Calls: phone and video run in the Android app, not in a browser preview.</li>
     <li>Safety: block or report someone from the chat options menu.</li>
   </ul>
-  <p>Email <a href="mailto:bhk.oracle@gmail.com">bhk.oracle@gmail.com</a>, or send a message from Support inside the app. Include the email on your account so a reply can reach you.</p>`
+  <p>Email <a href="mailto:support@eira.app">support@eira.app</a>, or send a message from Support inside the app. Include the email on your account so a reply can reach you.</p>`
 );
 
 const childSafetyHtml = page(
@@ -82,7 +82,7 @@ const childSafetyHtml = page(
     <li>Grooming, sexual extortion, or trafficking of a child.</li>
   </ul>
   <h2>How to report</h2>
-  <p>In the app, open the chat with that person, choose the options menu, and report them. You can also email <a href="mailto:bhk.oracle@gmail.com">bhk.oracle@gmail.com</a>. Include the account email, the profile name, and what you saw. Do not send the illegal material itself.</p>
+  <p>In the app, open the chat with that person, choose the options menu, and report them. You can also email <a href="mailto:support@eira.app">support@eira.app</a>. Include the account email, the profile name, and what you saw. Do not send the illegal material itself.</p>
   <h2>What we do</h2>
   <ul>
     <li>We review reports of child sexual abuse material and remove the account and the content we can identify.</li>
@@ -90,7 +90,7 @@ const childSafetyHtml = page(
     <li>We report child sexual abuse material to the appropriate regional authority when the law requires it.</li>
   </ul>
   <h2>Contact</h2>
-  <p>The child-safety contact for Eira is <a href="mailto:bhk.oracle@gmail.com">bhk.oracle@gmail.com</a>. This address can answer questions about these standards and about reports.</p>`
+  <p>The child-safety contact for Eira is <a href="mailto:support@eira.app">support@eira.app</a>. This address can answer questions about these standards and about reports.</p>`
 );
 
 const termsHtml = page(

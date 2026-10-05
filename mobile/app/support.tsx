@@ -48,8 +48,8 @@ export default function SupportScreen() {
         <Text style={styles.body}>
           Ask for help with your account, a profile photo, chat, a call, safety, or a copyright concern. Replies go to the email you enter.
         </Text>
-        <Pressable onPress={() => Linking.openURL("mailto:bhk.oracle@gmail.com")}>
-          <Text style={styles.link}>bhk.oracle@gmail.com</Text>
+        <Pressable onPress={() => Linking.openURL("mailto:support@eira.app")}>
+          <Text style={styles.link}>support@eira.app</Text>
         </Pressable>
         <Field label="Email" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
         <Text style={styles.label}>Topic</Text>

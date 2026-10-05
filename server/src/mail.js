@@ -10,7 +10,7 @@ function mailConfig() {
   return { host, user, pass, from, port };
 }
 
-async function sendResetCode(to, code) {
+async function sendMail({ to, subject, text, replyTo }) {
   const config = mailConfig();
   if (!config) {
     const error = new Error("Email is not set up on this server yet.");
@@ -27,8 +27,9 @@ async function sendResetCode(to, code) {
     await transport.sendMail({
       from: config.from,
       to,
-      subject: "Your Eira password code",
-      text: `Your Eira password reset code is ${code}. It expires in 10 minutes.\n\nIf you did not ask for this, you can ignore this email.`,
+      replyTo,
+      subject,
+      text,
     });
   } catch (error) {
     if (error && (error.code === "EAUTH" || error.responseCode === 535)) {
@@ -40,4 +41,22 @@ async function sendResetCode(to, code) {
   }
 }
 
-module.exports = { sendResetCode, mailConfigured: () => Boolean(mailConfig()) };
+async function sendResetCode(to, code) {
+  await sendMail({
+    to,
+    subject: "Your Eira password code",
+    text: `Your Eira password reset code is ${code}. It expires in 10 minutes.\n\nIf you did not ask for this, you can ignore this email.`,
+  });
+}
+
+async function sendSupportCopy({ email, topic, message }) {
+  const inbox = (process.env.SUPPORT_INBOX || "bhk.oracle@gmail.com").trim();
+  await sendMail({
+    to: inbox,
+    replyTo: email,
+    subject: `Eira support: ${topic}`,
+    text: `A support message was sent to support@eira.app.\n\nFrom: ${email}\nTopic: ${topic}\n\n${message}`,
+  });
+}
+
+module.exports = { sendResetCode, sendSupportCopy, mailConfigured: () => Boolean(mailConfig()) };
